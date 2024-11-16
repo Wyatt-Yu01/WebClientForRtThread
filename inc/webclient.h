@@ -168,7 +168,8 @@ int webclient_content_length_get(struct webclient_session *session);
 
 #ifdef RT_USING_DFS
 /* file related operations */
-int webclient_get_file(const char *URI, char *user, char *password, const char *filename);
+int webclient_get_file_auth(const char *URI, char *user, char *password, const char *filename);
+int webclient_get_file(const char *URI, const char *filename);
 int webclient_post_file(const char *URI, const char *filename, const char *form_data);
 #endif
 

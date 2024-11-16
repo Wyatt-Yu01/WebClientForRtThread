@@ -99,16 +99,8 @@ static int32_t webclient_file_base64_encode(char *src, int src_size, char *dst, 
 	return RT_EOK;
 }
 
-/**
- * send GET request and store response data into the file.
- *
- * @param URI input server address
- * @param filename store response date to filename
- *
- * @return <0: GET request failed
- *         =0: success
- */
-int webclient_get_file(const char* URI, char *user, char *password, const char* filename)
+
+int webclient_get_file_auth(const char* URI, char *user, char *password, const char* filename)
 {
     int fd = -1, rc = WEBCLIENT_OK;
     size_t offset;
@@ -226,6 +218,21 @@ __exit:
     }
 
     return rc;
+}
+
+/**
+ * send GET request and store response data into the file.
+ *
+ * @param URI input server address
+ * @param filename store response date to filename
+ *
+ * @return <0: GET request failed
+ *         =0: success
+ */
+
+int webclient_get_file(const char *URI, const char *filename)
+{
+    return webclient_get_file_auth(URI, RT_NULL, RT_NULL, filename);
 }
 
 /**
@@ -393,11 +400,11 @@ int wget(int argc, char** argv)
 {
     if (argc == 3)
     {
-        webclient_get_file(argv[1], RT_NULL, RT_NULL, argv[2]);
+        webclient_get_file(argv[1], argv[2]);
     }
     else if (argc == 5)
     {
-        webclient_get_file(argv[3], argv[1], argv[2], argv[4]);
+        webclient_get_file_auth(argv[3], argv[1], argv[2], argv[4]);
     }
     return 0;
 }
