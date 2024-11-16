@@ -34,7 +34,7 @@
 #include <lwip/sockets.h>
 #endif /* RT_USING_SAL */
 
-#define DBG_ENABLE
+#define WEBCLIENT_DEBUG
 #define DBG_SECTION_NAME               "web"
 #ifdef WEBCLIENT_DEBUG
 #define DBG_LEVEL                      DBG_LOG
@@ -691,7 +691,7 @@ static int webclient_send_header(struct webclient_session *session, int method)
 
             if (strstr(header, "User-Agent:") == RT_NULL)
             {
-                if (webclient_header_fields_add(session, "User-Agent: RT-Thread HTTP Agent\r\n") < 0)
+                if (webclient_header_fields_add(session, "User-Agent: Elevator IOT Agent\r\n") < 0)
                     return -WEBCLIENT_NOMEM;
             }
 

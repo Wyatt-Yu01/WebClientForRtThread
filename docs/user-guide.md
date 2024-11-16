@@ -213,7 +213,7 @@ struct webclient_session *session = NULL;
 
 session = webclient_create(1024);
 
-webclient_header_fields_add(session, "User-Agent: RT-Thread HTTP Agent\r\n");
+webclient_header_fields_add(session, "User-Agent: Elevator IOT Agent\r\n");
 
 if(webclient_get(session, URI) != 200)
 {

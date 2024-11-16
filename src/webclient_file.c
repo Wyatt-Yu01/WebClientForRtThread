@@ -15,12 +15,12 @@
 
 #include <rtthread.h>
 #include <webclient.h>
-
+#include "tiny_base64.h"
 #ifdef RT_USING_DFS
 #include <unistd.h>
 #include <fcntl.h>
 
-#define DBG_ENABLE
+#define WEBCLIENT_DEBUG
 #define DBG_SECTION_NAME               "web.file"
 #ifdef WEBCLIENT_DEBUG
 #define DBG_LEVEL                      DBG_LOG
@@ -39,7 +39,7 @@
  * @return <0: GET request failed
  *         =0: success
  */
-int webclient_get_file(const char* URI, const char* filename)
+int webclient_get_file(const char* URI, char *user, char *password, const char* filename)
 {
     int fd = -1, rc = WEBCLIENT_OK;
     size_t offset;
@@ -47,12 +47,26 @@ int webclient_get_file(const char* URI, const char* filename)
     unsigned char *ptr = RT_NULL;
     struct webclient_session* session = RT_NULL;
     int resp_status = 0;
+    LOG_D("webclient_get_file: %s, user:[%s], pw:[%s], local:[%s]", URI, user, password, filename);
 
     session = webclient_session_create(WEBCLIENT_HEADER_BUFSZ);
     if(session == RT_NULL)
     {
         rc = -WEBCLIENT_NOMEM;
         goto __exit;
+    }
+
+    if((user != RT_NULL) && (password != RT_NULL))
+    {
+        uint8_t auth[64] = {0};
+        int32_t length = rt_snprintf(auth, 64, "%s:%s", user, password);
+
+        uint8_t base64_auth[128] = {0};
+        int32_t base64_bufsz = 128;
+        tiny_base64_encode(base64_auth, &base64_bufsz, auth, length);
+
+        int32_t ret = webclient_header_fields_add(session, "Authorization: Basic %s\r\n", base64_auth);
+        LOG_D("AUTH:%s, auto-base64[%s], size:[%d], ret:[%d]", auth, base64_auth, base64_bufsz, ret);
     }
 
     if ((resp_status = webclient_get(session, URI)) != 200)
@@ -306,13 +320,14 @@ __exit:
 
 int wget(int argc, char** argv)
 {
-    if (argc != 3)
+    if (argc == 3)
     {
-        rt_kprintf("Please using: wget <URI> <filename>\n");
-        return -1;
+        webclient_get_file(argv[1], RT_NULL, RT_NULL, argv[2]);
     }
-
-    webclient_get_file(argv[1], argv[2]);
+    else if (argc == 5)
+    {
+        webclient_get_file(argv[3], argv[1], argv[2], argv[4]);
+    }
     return 0;
 }
 
