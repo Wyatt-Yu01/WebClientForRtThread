@@ -34,7 +34,7 @@
 #include <lwip/sockets.h>
 #endif /* RT_USING_SAL */
 
-#define WEBCLIENT_DEBUG
+//#define WEBCLIENT_DEBUG
 #define DBG_SECTION_NAME               "web"
 #ifdef WEBCLIENT_DEBUG
 #define DBG_LEVEL                      DBG_LOG

@@ -15,12 +15,11 @@
 
 #include <rtthread.h>
 #include <webclient.h>
-#include "tiny_base64.h"
 #ifdef RT_USING_DFS
 #include <unistd.h>
 #include <fcntl.h>
 
-#define WEBCLIENT_DEBUG
+//#define WEBCLIENT_DEBUG
 #define DBG_SECTION_NAME               "web.file"
 #ifdef WEBCLIENT_DEBUG
 #define DBG_LEVEL                      DBG_LOG
@@ -29,6 +28,76 @@
 #endif /* WEBCLIENT_DEBUG */
 #define DBG_COLOR
 #include <rtdbg.h>
+
+static const uint8_t base64_encode_map[64] = {
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+    'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+    'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
+    'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+    'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+    'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', '+', '/'};
+
+static int32_t webclient_file_base64_encode(char *src, int src_size, char *dst, int32_t *dst_size)
+{
+    int i, n;
+	int C1, C2, C3;
+	unsigned char *p;
+
+	if (src_size == 0)
+		return RT_EOK;
+
+	n = (src_size << 3) / 6;
+
+	switch ((src_size << 3) - (n * 6)) {
+	case 2:
+		n += 3;
+		break;
+	case 4:
+		n += 2;
+		break;
+	default:
+		break;
+	}
+
+	if (*dst_size < n + 1) {
+		*dst_size = n + 1;
+		return -RT_ERROR;
+	}
+
+	n = (src_size / 3) * 3;
+
+	for (i = 0, p = dst; i < n; i += 3) {
+		C1 = *src++;
+		C2 = *src++;
+		C3 = *src++;
+
+		*p++ = base64_encode_map[(C1 >> 2) & 0x3F];
+		*p++ = base64_encode_map[(((C1 & 3) << 4) + (C2 >> 4)) & 0x3F];
+		*p++ = base64_encode_map[(((C2 & 15) << 2) + (C3 >> 6)) & 0x3F];
+		*p++ = base64_encode_map[C3 & 0x3F];
+	}
+
+	if (i < src_size) {
+		C1 = *src++;
+		C2 = ((i + 1) < src_size) ? *src++ : 0;
+
+		*p++ = base64_encode_map[(C1 >> 2) & 0x3F];
+		*p++ = base64_encode_map[(((C1 & 3) << 4) + (C2 >> 4)) & 0x3F];
+
+		if ((i + 1) < src_size)
+			*p++ = base64_encode_map[((C2 & 15) << 2) & 0x3F];
+		else
+			*p++ = '=';
+
+		*p++ = '=';
+	}
+
+	*dst_size = p - dst;
+	*p = 0;
+
+	return RT_EOK;
+}
 
 /**
  * send GET request and store response data into the file.
@@ -63,10 +132,12 @@ int webclient_get_file(const char* URI, char *user, char *password, const char* 
 
         uint8_t base64_auth[128] = {0};
         int32_t base64_bufsz = 128;
-        tiny_base64_encode(base64_auth, &base64_bufsz, auth, length);
-
-        int32_t ret = webclient_header_fields_add(session, "Authorization: Basic %s\r\n", base64_auth);
-        LOG_D("AUTH:%s, auto-base64[%s], size:[%d], ret:[%d]", auth, base64_auth, base64_bufsz, ret);
+        int32_t ret = webclient_file_base64_encode(auth, length, base64_auth, &base64_bufsz);
+        if (ret == 0)
+        {
+            int32_t ret = webclient_header_fields_add(session, "Authorization: Basic %s\r\n", base64_auth);
+            LOG_D("AUTH:%s, auto-base64[%s], size:[%d], ret:[%d]", auth, base64_auth, base64_bufsz, ret);
+        }
     }
 
     if ((resp_status = webclient_get(session, URI)) != 200)
